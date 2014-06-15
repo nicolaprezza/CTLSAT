@@ -17,7 +17,6 @@ int main(int argc,char** argv){
 	Formula * f = parser->parse(string(argv[1]));
 
 	Tableau * tableau = new Tableau(f);
-	cout << endl;
 
 	if(tableau->isSatisfable())
 		cout << "Input formula is satisfable!\n";

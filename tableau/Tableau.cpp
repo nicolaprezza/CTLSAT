@@ -33,7 +33,7 @@ Tableau::Tableau(Formula * f){//builds the tableau for formula f
 	cout << "Positive closure set (only non-negated formulas in the closure set):\n";
 
 	for(uint i=0;i<positive_closure->size();i++)
-		cout << positive_closure->at(i)->toString()<<endl;
+		cout << (i+1) << ".  " << positive_closure->at(i)->toString()<<endl;
 
 	cout << "\nClosure set has size " << positive_closure->size()*2<< ". \n\nBuilding initial feasible states of the tableau ... "<< endl;
 
@@ -83,7 +83,7 @@ Tableau::Tableau(Formula * f){//builds the tableau for formula f
 	//medium: EU, ENU
 	//hard: AU, ANU
 	//heuristic:
-	//1) firstly, apply only easy culls until it is no more possible to apply easy culls
+	//1) firstly, apply only easy culls until it is no more possible to apply them
 	//2) then, apply medium culls together with easy culls until is no more possible to apply medium/easy culls
 	//3) at this point, try with the hard culls. Once a hard cull has been executed, restart from 1)
 	//repeat until no more culls are possible.
@@ -691,33 +691,14 @@ uint Tableau::cullEasy(){
 
 	//1) check iteratively easy conditions: EXT, EX, ENX
 
-	while(true){//repeat until it is possible to remove states using easy conditions
+	//search a state that falsifies at least one easy condition and cull it recursively backtracking its back edges
+	for(uint i=0;i<states->size();i++)//for all states
+		if(not isRemoved->at(i)){//if state is present in the model
 
-		bool conditions_sat=true;
-
-		uint to_be_culled=0;
-		//search a state that falsifies at least one easy condition
-		for(uint i=0;conditions_sat and i<states->size();i++)//for all states
-			if(not isRemoved->at(i)){//if state is present in the model
-
-				conditions_sat = checkEasy(i);
-
-				if(not conditions_sat)
-					to_be_culled=i;
-
-			}
-
-		if(not conditions_sat){//state i falsifies a condition: remove recursively, backtracking edges
-
-			cullEasyRecursive(to_be_culled);
-
-		}else{
-
-			break;//exit the while loop
+			if(not checkEasy(i))
+				cullEasyRecursive(i);
 
 		}
-
-	}
 
 	return initial_nr_of_states-number_of_states;//return number of states removed
 
@@ -727,24 +708,13 @@ uint Tableau::cullMedium(){
 
 	uint initial_nr_of_states = number_of_states;
 
-	bool conditions_sat = true;
-	uint to_be_culled=0;
-
-	for(uint i=0;conditions_sat and i<states->size();i++)//for all states
+	for(uint i=0; i<states->size();i++)//for all states
 		if(not isRemoved->at(i)){//if state is present in the model
 
-			conditions_sat = checkMedium(i);
-
-			if(not conditions_sat)
-				to_be_culled=i;
+			if(not checkMedium(i))
+				cullEasyRecursive(i);
 
 		}
-
-	if(not conditions_sat){//state i falsifies a condition: remove recursively using easy conditions
-
-		cullEasyRecursive(to_be_culled);
-
-	}
 
 	return initial_nr_of_states-number_of_states;//return number of states removed
 
@@ -993,7 +963,6 @@ bool Tableau::checkENUrecursive(ulint i,formula a, formula b){
 	return path_found;
 
 }
-
 
 bool Tableau::isSatisfable(){//true iif f admits a model
 
