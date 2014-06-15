@@ -53,14 +53,25 @@ private:
 	void cull();
 
 	uint cullEasy();
+	uint cullMedium();
 	void cullEasyRecursive(uint i);
 	// -----------------------
+
+	void clearMarked();
 
 	//check cull rules:
 	bool checkEXT(ulint i);//i=index of state
 	bool checkEX(ulint i);//i=index of state
 	bool checkENX(ulint i);//i=index of state
-	bool checkEasy(ulint i);
+	bool checkEasy(ulint i);//check EXT,EX,ENX
+
+	bool checkEU(ulint i);
+	bool checkEUrecursive(ulint i,formula a, formula b);
+	bool checkENU(ulint i);
+	bool checkENUrecursive(ulint i,formula a, formula b);
+	bool checkMedium(ulint i);
+
+
 
 	void printState(state B);
 
@@ -150,6 +161,8 @@ private:
 
 	//removed(i) = state in position i has been removed
 	vector<bool> * isRemoved;
+
+	vector<bool> * marked;//mark states during visits
 
 	formula initial_formula;
 

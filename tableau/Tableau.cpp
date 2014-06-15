@@ -58,6 +58,8 @@ Tableau::Tableau(Formula * f){//builds the tableau for formula f
 	for(ulint i=0;i<states->size();i++)
 		isRemoved->at(i)=false;
 
+	marked = new vector<bool>(states->size());
+
 	/*cout << endl;
 	for(uint i=0;i<states->size();i++){
 		printState(states->at(i));
@@ -92,6 +94,11 @@ Tableau::Tableau(Formula * f){//builds the tableau for formula f
 	cout << "\nAll states left are consistent with the rules.\n";
 	cout << "done. Number of states left : " << number_of_states <<endl<<endl;
 
+}
+
+void Tableau::clearMarked(){
+	for(ulint i=0;i<states->size();i++)
+		marked->at(i)=false;
 }
 
 void Tableau::computeSubFormulas(){
@@ -452,7 +459,7 @@ void Tableau::buildFeasibleStatesRecursive(state inserted, state polarity, formu
 	if(formula_nr>=positive_closure->size()){
 		states->push_back(polarity);
 
-		if(states->size()%5000==0){
+		if(states->size()%1000==0){
 			cout << " " << states->size() << " feasible states created until now\n";
 		}
 
@@ -653,24 +660,20 @@ void Tableau::buildEdges(){
 
 void Tableau::cull(){
 
-	uint states_removed = cullEasy();
-
-	if(states_removed==0){
-
-		//states_removed = cullMedium();
-
-		//if(states_removed==0)
-			//states_removed = cullHard();
-
-	}
+	bool verbose = false;
+	uint states_removed = 1;//to enter in the while loop
 
 	while(states_removed>0){//repeat cull until it is possible to remove states
 
+		if(verbose) cout << " Checking EX, EXT, ENX conditions ... ";
 		states_removed = cullEasy();
+		if(verbose) cout << states_removed << " states removed.\n";
 
 		if(states_removed==0){
 
-			//states_removed = cullMedium();
+			if(verbose) cout << " All states satisfy EX, EXT, ENX conditions. Checking EU and ENU conditions ... ";
+			states_removed = cullMedium();
+			if(verbose) cout << states_removed << " states removed.\n";
 
 			//if(states_removed==0)
 				//states_removed = cullHard();
@@ -720,6 +723,34 @@ uint Tableau::cullEasy(){
 
 }
 
+uint Tableau::cullMedium(){
+
+	uint initial_nr_of_states = number_of_states;
+
+	bool conditions_sat = true;
+	uint to_be_culled=0;
+
+	for(uint i=0;conditions_sat and i<states->size();i++)//for all states
+		if(not isRemoved->at(i)){//if state is present in the model
+
+			conditions_sat = checkMedium(i);
+
+			if(not conditions_sat)
+				to_be_culled=i;
+
+		}
+
+	if(not conditions_sat){//state i falsifies a condition: remove recursively using easy conditions
+
+		cullEasyRecursive(to_be_culled);
+
+	}
+
+	return initial_nr_of_states-number_of_states;//return number of states removed
+
+}
+
+
 void Tableau::cullEasyRecursive(uint i){
 
 	removeState(i);//remove state, all its forward edges (not back edges) and remove the state i from the adj lists of all its neighbors
@@ -745,7 +776,7 @@ void Tableau::removeState(uint i){//removes state i and all entering and exiting
 	number_of_states--;
 
 	if(number_of_states%100==0)
-		cout << " " << number_of_states << " states left\n";
+		cout << "  " << number_of_states << " states left\n";
 
 	isRemoved->at(i) = true;//mark as removed
 
@@ -768,6 +799,12 @@ void Tableau::removeState(uint i){//removes state i and all entering and exiting
 bool Tableau::checkEasy(ulint i){
 
 	return checkEXT(i) and checkEX(i) and checkENX(i);
+
+}
+
+bool Tableau::checkMedium(ulint i){
+
+	return checkEU(i) and checkENU(i);
 
 }
 
@@ -821,11 +858,10 @@ bool Tableau::checkENX(ulint i){
 
 			formula not_a = negateFormula(leftSubformula->at(k));//get subformula a of AXa and negate it, obtaining ~a
 
-			std::set<uint>::iterator it;
 			bool exists_successor=false;
 
 			//loop through states in the adj list of i.
-			for(it = edges->at(i).begin(); (not exists_successor) and it != edges->at(i).end();++it)
+			for(std::set<uint>::iterator it = edges->at(i).begin(); (not exists_successor) and it != edges->at(i).end();++it)
 				exists_successor |= belongsTo(states->at(*it),not_a);//~a must be in at least one successor of i
 
 			all_neg_exists_have_successor &= exists_successor;
@@ -837,6 +873,127 @@ bool Tableau::checkENX(ulint i){
 	return all_neg_exists_have_successor;
 
 }
+
+bool Tableau::checkEU(ulint i){
+
+	//for each E(aUb): find a path starting from i that has always a until finally b is found
+	//no loops back: mark states
+
+	bool all_EU_satisfied = true;
+
+	for(formula_index k = 0; all_EU_satisfied and k<positive_closure->size();k++){//for each formula in i
+
+		//if k is inside i in positive form AND k is a E(aUb) (i.e. for all E(aUb) inside i)
+		if( belongsTo(states->at(i),indexToPositiveFormula(k)) and positive_closure->at(k)->getType()==EXISTS_UNTIL){
+
+			formula a = leftSubformula->at(k);
+			formula b = rightSubformula->at(k);
+
+			clearMarked();//unmark all states
+			all_EU_satisfied &= checkEUrecursive(i,a,b);//start visit (DFS)
+
+		}
+
+	}
+
+	return all_EU_satisfied;
+
+}
+
+bool Tableau::checkEUrecursive(ulint i,formula a, formula b){
+
+	//find a path starting from i that has always a until finally b is found (DFS visit)
+	//no loops back: mark states
+
+	marked->at(i) = true;//mark this state
+
+	if(belongsTo(states->at(i),b))//b is in this state: return success
+		return true;
+
+	if(not belongsTo(states->at(i),a))//a is not in this state (and neither b): return false
+		return false;
+
+	//b is not in this state and a is in this state. return success iif at least one non-visited successor returns success
+
+	bool path_found = false;
+
+	for(std::set<uint>::iterator it = edges->at(i).begin(); (not path_found) and it != edges->at(i).end();++it){//for all successors of i
+
+		if(not marked->at(*it)){//if the successor is not marked
+
+			path_found |= checkEUrecursive(*it,a,b);
+
+		}
+
+	}
+
+	return path_found;
+
+}
+
+bool Tableau::checkENU(ulint i){
+
+	//for each E~(aUb) = ~A(aUb): find a path starting from i that has always ~b until finally ~b and ~a is found, OR
+	//the path has always ~b and at some point it loops
+
+	clearMarked();//unmark all states
+
+	bool all_ENU_satisfied = true;
+
+	for(formula_index k = 0; all_ENU_satisfied and k<positive_closure->size();k++){//for each formula in i
+
+		//if k is inside i in negative form AND k is a A(aUb) (i.e. for all E~(aUb) inside i)
+		if( belongsTo(states->at(i),indexToNegativeFormula(k)) and positive_closure->at(k)->getType()==ALL_UNTIL){
+
+			formula a = leftSubformula->at(k);
+			formula b = rightSubformula->at(k);
+
+			all_ENU_satisfied &= checkENUrecursive(i,a,b);//start visit (DFS). note that states are all unmarked after call is finished (no need to call clearMarked())
+
+		}
+
+	}
+
+	return all_ENU_satisfied;
+
+}
+
+bool Tableau::checkENUrecursive(ulint i,formula a, formula b){
+
+	marked->at(i) = true;//mark this state
+
+	if(belongsTo(states->at(i),b))//b is in this state: return false
+		return false;
+
+	//here we are sure that ~b is in this state
+
+	if(belongsTo(states->at(i),negateFormula(a)))//~a is in this state return true
+		return true;
+
+	//here we know that the state contains ~b and a
+
+	bool path_found = false;
+
+	for(std::set<uint>::iterator it = edges->at(i).begin(); (not path_found) and it != edges->at(i).end();++it){//for all successors of i
+
+		if(not marked->at(*it)){//if the successor is not marked: call recursive DFS
+
+			path_found |= checkEUrecursive(*it,a,b);
+
+		}else{//the successor is marked: since we are unmarking states returning from recursion, this means that we found a loop
+
+			return true;
+
+		}
+
+	}
+
+	marked->at(i) = false;//unmark this state
+
+	return path_found;
+
+}
+
 
 bool Tableau::isSatisfable(){//true iif f admits a model
 
