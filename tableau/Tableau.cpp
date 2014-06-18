@@ -101,6 +101,21 @@ Tableau::Tableau(Formula * f){//builds the tableau for formula f
 	cout << "\nAll states left are consistent with the rules.\n";
 	cout << "done. Number of states left : " << number_of_states <<endl<<endl;
 
+	cout << endl;
+	for(uint i=0;i<states->size();i++){
+
+		cout << "State nr " << i << "\nedges : ";
+
+		for(uint j=0;j<edges->at(i).size();j++)
+			cout << j << " ";
+
+		cout << "\nREMOVED? " << isRemoved->at(i) << endl;
+
+		printState(states->at(i));
+		cout << endl;
+	}
+	cout << endl;
+
 }
 
 void Tableau::clearMarked(){
@@ -667,10 +682,10 @@ void Tableau::buildEdges(){
 
 void Tableau::cull(){
 
-	bool verbose = false;
+	bool verbose = true;
 	uint states_removed = 1;//to enter in the while loop
 
-	while(isSatisfiable()){//repeat cull until there exists a state where the original formula is satisfiable
+	while(isSatisfiable() and states_removed>0){//repeat cull until there exists a state where the original formula is satisfiable
 
 		if(verbose) cout << " Checking EX, EXT, ENX conditions ... ";
 		states_removed = cullEasy();
@@ -682,9 +697,11 @@ void Tableau::cull(){
 			states_removed = cullMedium();
 			if(verbose) cout << states_removed << " states removed.\n";
 
-			if(states_removed==0)
+			if(states_removed==0){
+				if(verbose) cout << " All states satisfy EX, EXT, ENX, EU, and ENU conditions. Checking AU and ANU conditions ... ";
 				states_removed = cullHard();
-
+				if(verbose) cout << states_removed << " states removed.\n";
+			}
 		}
 
 
@@ -955,10 +972,15 @@ bool Tableau::checkAUrecursive(ulint i,formula a, formula b){
 
 	//1) visit recursively successors and check the A(aUb) rule
 
+	uint sat_successors=0;//number of satisfied successors
+
 	for(std::set<uint>::iterator it = edges->at(i).begin(); it != edges->at(i).end();++it){//for all non-visited successors of i
 
 		if(status[*it]==NOT_VISITED)
 			checkAUrecursive(*it,a, b);
+
+		if(status[*it]==SATISFIED)
+			sat_successors++;
 
 	}
 
@@ -985,7 +1007,9 @@ bool Tableau::checkAUrecursive(ulint i,formula a, formula b){
 
 	}
 
-	//now, for each E formula in existential_formulas, check that there exist a successor marked SATISFIED that satisfies the E formula
+	//now, 2 cases:
+	//1) if existential_formulas not empty: for each E formula in existential_formulas, check that there exist a successor marked SATISFIED that satisfies the E formula
+	//1) if existential_formulas is empty: there must be at least one successor marked SATISFIED
 
 	bool E_satisfied = true;
 
@@ -1004,12 +1028,12 @@ bool Tableau::checkAUrecursive(ulint i,formula a, formula b){
 
 	}
 
-	if(E_satisfied)
+	if(E_satisfied and sat_successors>0)
 		status[i] = SATISFIED;
 	else
 		status[i] = NOT_SATISFIED;
 
-	return E_satisfied;
+	return status[i] == SATISFIED;
 
 }
 
