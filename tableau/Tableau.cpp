@@ -98,8 +98,7 @@ Tableau::Tableau(Formula * f){//builds the tableau for formula f
 
 	cout << "Starting repeated cull "<< endl;
 	cull();
-	cout << "\nAll states left are consistent with the rules.\n";
-	cout << "done. Number of states left : " << number_of_states <<endl<<endl;
+	cout << "\ndone. Number of states left : " << number_of_states <<endl<<endl;
 
 	/*cout << endl;
 	for(uint i=0;i<states->size();i++){
@@ -682,7 +681,7 @@ void Tableau::buildEdges(){
 
 void Tableau::cull(){
 
-	bool verbose = true;
+	bool verbose = false;
 	uint states_removed = 1;//to enter in the while loop
 
 	while(isSatisfiable() and states_removed>0){//repeat cull until there exists a state where the original formula is satisfiable
