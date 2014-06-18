@@ -101,7 +101,7 @@ Tableau::Tableau(Formula * f){//builds the tableau for formula f
 	cout << "\nAll states left are consistent with the rules.\n";
 	cout << "done. Number of states left : " << number_of_states <<endl<<endl;
 
-	cout << endl;
+	/*cout << endl;
 	for(uint i=0;i<states->size();i++){
 
 		cout << "State nr " << i << "\nedges : ";
@@ -114,7 +114,7 @@ Tableau::Tableau(Formula * f){//builds the tableau for formula f
 		printState(states->at(i));
 		cout << endl;
 	}
-	cout << endl;
+	cout << endl;*/
 
 }
 
@@ -829,7 +829,7 @@ bool Tableau::checkMedium(ulint i){
 
 bool Tableau::checkHard(ulint i){
 
-	return checkAU(i);//TODO check ANU
+	return checkAU(i) and checkANU(i);
 
 }
 
@@ -1036,6 +1036,107 @@ bool Tableau::checkAUrecursive(ulint i,formula a, formula b){
 	return status[i] == SATISFIED;
 
 }
+
+bool Tableau::checkANU(ulint i){
+
+	bool all_ANU_satisfied = true;
+
+	for(formula_index k = 0; all_ANU_satisfied and k<positive_closure->size();k++){//for each formula in i
+
+		//if k is inside i in negative form AND k is a E(aUb) (i.e. for all A~(aUb) inside i)
+		if( belongsTo(states->at(i),indexToNegativeFormula(k)) and positive_closure->at(k)->getType()==EXISTS_UNTIL){
+
+			formula a = leftSubformula->at(k);
+			formula b = rightSubformula->at(k);
+
+			clearMarked();//unmark all states
+			all_ANU_satisfied &= checkANUrecursive(i,a,b);//start visit (DFS)
+
+		}
+
+	}
+
+	return all_ANU_satisfied;
+
+}
+
+bool Tableau::checkANUrecursive(ulint i,formula a, formula b){
+
+	//b is in this state: return false
+	if(belongsTo(states->at(i),b)){
+		status[i] = NOT_SATISFIED;
+		return false;
+	}
+
+	//here we know that b is not in i
+
+	if(not belongsTo(states->at(i),a)){//a and b are not in i: return true (A~(aUb) satisfied in this state)
+		status[i] = SATISFIED;
+		return true;
+	}
+
+	//here we know that b is NOT in i and a is in i
+
+	status[i] = VISITED;//mark status as visited
+
+	//1) visit recursively successors and check the A~(aUb) rule
+
+	for(std::set<uint>::iterator it = edges->at(i).begin(); it != edges->at(i).end();++it){//for all non-visited successors of i
+
+		if(status[*it]==NOT_VISITED)
+			checkANUrecursive(*it,a, b);
+
+	}
+
+	//now each successor is marked as SATISFIED (A~(aUb) satisfied), NOT_SATISFIED (A~(aUb) not satisfied) or
+	//VISITED (loop)
+
+	//extract all EX, E~X, EU, E~U rules present in state i: sub-structure must be consistent
+
+	vector<formula> existential_formulas;//existential formulas inside state i
+
+	for(formula_index k = 0; k<positive_closure->size();k++){//for each formula in i
+
+		if( belongsTo(states->at(i),indexToPositiveFormula(k)) and positive_closure->at(k)->getType()==EXISTS_TOMORROW)//EX
+			existential_formulas.push_back(indexToPositiveFormula(k));
+
+		if( belongsTo(states->at(i),indexToNegativeFormula(k)) and positive_closure->at(k)->getType()==ALL_TOMORROW)//~AX = E~X
+				existential_formulas.push_back(indexToNegativeFormula(k));
+
+		if( belongsTo(states->at(i),indexToPositiveFormula(k)) and positive_closure->at(k)->getType()==EXISTS_UNTIL)//EU
+			existential_formulas.push_back(indexToPositiveFormula(k));
+
+		if( belongsTo(states->at(i),indexToNegativeFormula(k)) and positive_closure->at(k)->getType()==ALL_UNTIL)//~AU = E~U
+			existential_formulas.push_back(indexToNegativeFormula(k));
+
+	}
+
+	bool E_satisfied = true;//all existential formulas satisfied
+
+	for(uint k=0;E_satisfied and k<existential_formulas.size();k++){//for each E formula
+
+		bool exist_good_successor = false;//exists a successor marked SATISFIED or VISITED (loop) that satisfies the E formula
+
+		for(std::set<uint>::iterator it = edges->at(i).begin(); (not exist_good_successor) and it != edges->at(i).end();++it){//for all successors of i
+
+			if(status[*it]==SATISFIED or status[*it]==VISITED)//only for successors marked SATISFIED or VISITED
+				exist_good_successor |= checkEformula(existential_formulas.at(k),i,*it);//check that the E formula is sat in i->*it
+
+		}
+
+		E_satisfied &= exist_good_successor;
+
+	}
+
+	if(E_satisfied)
+		status[i] = SATISFIED;
+	else
+		status[i] = NOT_SATISFIED;
+
+	return status[i] == SATISFIED;
+
+}
+
 
 bool Tableau::checkEformula(formula f, ulint s1, ulint s2){//check if existential formula f is valid in the states s1->s2
 

@@ -74,10 +74,12 @@ private:
 	bool checkENUrecursive(ulint i,formula a, formula b);
 	bool checkMedium(ulint i);
 
+	bool checkAU(ulint i);
 	bool checkAUrecursive(ulint i,formula a, formula b);
 
-	bool checkAU(ulint i);
 	bool checkANU(ulint i);
+	bool checkANUrecursive(ulint i,formula a, formula b);
+
 	bool checkEformula(formula f, ulint s1, ulint s2);//check if existential formula f is valid in the states s1->s2
 	bool checkHard(ulint i);
 
