@@ -39,3 +39,7 @@ clean:
 
 	rm -f $(BINARY)
 
+example:
+
+	./ctl-sat "~( AG(p->EXp) -> AG(p->EGp) )"
+
