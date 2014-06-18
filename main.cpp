@@ -18,7 +18,7 @@ int main(int argc,char** argv){
 
 	Tableau * tableau = new Tableau(f);
 
-	if(tableau->isSatisfable())
+	if(tableau->isSatisfiable())
 		cout << "Input formula is satisfable!\n";
 	else
 		cout << "Input formula is NOT satisfable!\n";

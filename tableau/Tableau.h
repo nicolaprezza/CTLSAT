@@ -18,13 +18,15 @@ namespace ctl_sat {
 class Tableau {
 public:
 	Tableau(Formula * f);//builds the tableau for formula f
-	bool isSatisfable();//true iif f admits a model
+	bool isSatisfiable();//true iif f admits a model
 
 	uint numberOfStates(){return number_of_states;}//at each phase of the construction, this is the current number of states left.
 
 	virtual ~Tableau();
 
 private:
+
+	enum state_status {VISITED,NOT_VISITED,SATISFIED,NOT_SATISFIED};//status of states during dfs visit
 
 	struct FormulaLessThan {
 	  bool operator() (Formula * f1,Formula * f2) { return *f1 < *f2; }
@@ -54,6 +56,7 @@ private:
 
 	uint cullEasy();
 	uint cullMedium();
+	uint cullHard();
 	void cullEasyRecursive(uint i);
 	// -----------------------
 
@@ -71,6 +74,12 @@ private:
 	bool checkENUrecursive(ulint i,formula a, formula b);
 	bool checkMedium(ulint i);
 
+	bool checkAUrecursive(ulint i,formula a, formula b);
+
+	bool checkAU(ulint i);
+	bool checkANU(ulint i);
+	bool checkEformula(formula f, ulint s1, ulint s2);//check if existential formula f is valid in the states s1->s2
+	bool checkHard(ulint i);
 
 
 	void printState(state B);
@@ -162,7 +171,11 @@ private:
 	//removed(i) = state in position i has been removed
 	vector<bool> * isRemoved;
 
-	vector<bool> * marked;//mark states during visits
+	//vector<bool> * marked;//mark states during visits
+
+	state_status * status;//mark states during visits
+
+	ulint number_of_states_with_original_formula;//number of states that contain the original formula
 
 	formula initial_formula;
 

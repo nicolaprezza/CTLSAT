@@ -58,7 +58,7 @@ Tableau::Tableau(Formula * f){//builds the tableau for formula f
 	for(ulint i=0;i<states->size();i++)
 		isRemoved->at(i)=false;
 
-	marked = new vector<bool>(states->size());
+	status = new state_status[states->size()];
 
 	/*cout << endl;
 	for(uint i=0;i<states->size();i++){
@@ -76,6 +76,13 @@ Tableau::Tableau(Formula * f){//builds the tableau for formula f
 
 	buildEdges();
 	cout << "done. Initial model has " << number_of_edges << " edges"<<endl<<endl;
+
+	//count how many states have the original formula
+
+	number_of_states_with_original_formula=0;
+	for(uint i=0;i<states->size();i++)//for all states
+		if(belongsTo(states->at(i),initial_formula))//if the original formula is in the state
+			number_of_states_with_original_formula++;
 
 	//Now apply repeated cull.
 	//culls are divided in 3 categories: easy, medium, hard:
@@ -98,7 +105,7 @@ Tableau::Tableau(Formula * f){//builds the tableau for formula f
 
 void Tableau::clearMarked(){
 	for(ulint i=0;i<states->size();i++)
-		marked->at(i)=false;
+		status[i] = NOT_VISITED;
 }
 
 void Tableau::computeSubFormulas(){
@@ -663,7 +670,7 @@ void Tableau::cull(){
 	bool verbose = false;
 	uint states_removed = 1;//to enter in the while loop
 
-	while(states_removed>0){//repeat cull until it is possible to remove states
+	while(isSatisfiable()){//repeat cull until there exists a state where the original formula is satisfiable
 
 		if(verbose) cout << " Checking EX, EXT, ENX conditions ... ";
 		states_removed = cullEasy();
@@ -675,8 +682,8 @@ void Tableau::cull(){
 			states_removed = cullMedium();
 			if(verbose) cout << states_removed << " states removed.\n";
 
-			//if(states_removed==0)
-				//states_removed = cullHard();
+			if(states_removed==0)
+				states_removed = cullHard();
 
 		}
 
@@ -720,6 +727,21 @@ uint Tableau::cullMedium(){
 
 }
 
+uint Tableau::cullHard(){
+
+	uint initial_nr_of_states = number_of_states;
+
+	for(uint i=0; i<states->size();i++)//for all states
+		if(not isRemoved->at(i)){//if state is present in the model
+
+			if(not checkHard(i))
+				cullEasyRecursive(i);
+
+		}
+
+	return initial_nr_of_states-number_of_states;//return number of states removed
+
+}
 
 void Tableau::cullEasyRecursive(uint i){
 
@@ -740,6 +762,16 @@ void Tableau::removeState(uint i){//removes state i and all entering and exiting
 
 		cout << "WARNING: removing state already removed ("<<i<<")\n";
 		return;
+
+	}
+
+	//if initial formula is in this state, decrease counter of states having the original formula.
+	if(belongsTo(states->at(i),initial_formula)){
+
+		if(number_of_states_with_original_formula==0)
+			cout << "WARNING: trying to decrease counter with zero value (number of states with original formula). Debug needed!\n";
+		else
+			number_of_states_with_original_formula--;
 
 	}
 
@@ -775,6 +807,12 @@ bool Tableau::checkEasy(ulint i){
 bool Tableau::checkMedium(ulint i){
 
 	return checkEU(i) and checkENU(i);
+
+}
+
+bool Tableau::checkHard(ulint i){
+
+	return checkAU(i);//TODO check ANU
 
 }
 
@@ -870,12 +908,175 @@ bool Tableau::checkEU(ulint i){
 
 }
 
+bool Tableau::checkAU(ulint i){
+
+	//for each A(aUb): find a tree substructure having always a and the leafs contain b and consistent with EX, E~X, EU, E~U
+	//no loops back: mark states
+
+	bool all_AU_satisfied = true;
+
+	for(formula_index k = 0; all_AU_satisfied and k<positive_closure->size();k++){//for each formula in i
+
+		//if k is inside i in positive form AND k is a A(aUb) (i.e. for all A(aUb) inside i)
+		if( belongsTo(states->at(i),indexToPositiveFormula(k)) and positive_closure->at(k)->getType()==ALL_UNTIL){
+
+			formula a = leftSubformula->at(k);
+			formula b = rightSubformula->at(k);
+
+			clearMarked();//unmark all states
+			all_AU_satisfied &= checkAUrecursive(i,a,b);//start visit (DFS)
+
+		}
+
+	}
+
+	return all_AU_satisfied;
+
+}
+
+bool Tableau::checkAUrecursive(ulint i,formula a, formula b){
+
+	//b is in this state: return true
+	if(belongsTo(states->at(i),b)){
+		status[i] = SATISFIED;
+		return true;
+	}
+
+	//here we know that b is not in i
+
+	if(not belongsTo(states->at(i),a)){//a and b are not in i: return false
+		status[i] = NOT_SATISFIED;
+		return false;
+	}
+
+	status[i] = VISITED;//mark status as visited to prevent loops
+
+	//here we are sure that the state contains a AND does not contain b: check AU rule
+
+	//1) visit recursively successors and check the A(aUb) rule
+
+	for(std::set<uint>::iterator it = edges->at(i).begin(); it != edges->at(i).end();++it){//for all non-visited successors of i
+
+		if(status[*it]==NOT_VISITED)
+			checkAUrecursive(*it,a, b);
+
+	}
+
+	//now each successor is marked as SATISFIED (A(aUb) satisfied), NOT_SATISFIED (A(aUb) not satisfied) or
+	//VISITED (loop: A(aUb) not satisfied because there exists a loop where a is always valid, but b never)
+
+	//extract all EX, E~X, EU, E~U rules present in state i
+
+	vector<formula> existential_formulas;//existential formulas inside state i
+
+	for(formula_index k = 0; k<positive_closure->size();k++){//for each formula in i
+
+		if( belongsTo(states->at(i),indexToPositiveFormula(k)) and positive_closure->at(k)->getType()==EXISTS_TOMORROW)//EX
+			existential_formulas.push_back(indexToPositiveFormula(k));
+
+		if( belongsTo(states->at(i),indexToNegativeFormula(k)) and positive_closure->at(k)->getType()==ALL_TOMORROW)//~AX = E~X
+				existential_formulas.push_back(indexToNegativeFormula(k));
+
+		if( belongsTo(states->at(i),indexToPositiveFormula(k)) and positive_closure->at(k)->getType()==EXISTS_UNTIL)//EU
+			existential_formulas.push_back(indexToPositiveFormula(k));
+
+		if( belongsTo(states->at(i),indexToNegativeFormula(k)) and positive_closure->at(k)->getType()==ALL_UNTIL)//~AU = E~U
+			existential_formulas.push_back(indexToNegativeFormula(k));
+
+	}
+
+	//now, for each E formula in existential_formulas, check that there exist a successor marked SATISFIED that satisfies the E formula
+
+	bool E_satisfied = true;
+
+	for(uint k=0;E_satisfied and k<existential_formulas.size();k++){//for each E formula
+
+		bool exist_good_successor = false;//exists a successor marked SATISFIED that satisfies the E formula
+
+		for(std::set<uint>::iterator it = edges->at(i).begin(); (not exist_good_successor) and it != edges->at(i).end();++it){//for all successors of i
+
+			if(status[*it]==SATISFIED)//only for successors marked SATISFIED
+				exist_good_successor |= checkEformula(existential_formulas.at(k),i,*it);//check that the E formula is sat in i->*it
+
+		}
+
+		E_satisfied &= exist_good_successor;
+
+	}
+
+	if(E_satisfied)
+		status[i] = SATISFIED;
+	else
+		status[i] = NOT_SATISFIED;
+
+	return E_satisfied;
+
+}
+
+bool Tableau::checkEformula(formula f, ulint s1, ulint s2){//check if existential formula f is valid in the states s1->s2
+
+	//assumption: f is either EX, ~AX, EU or ~AU
+
+	formula_index k = formulaToIndex(f);
+	formula a,b;
+
+	switch(positive_closure->at(k)->getType()){
+
+		case EXISTS_TOMORROW: /*f is EXa: s2 must contain a*/
+
+			a = leftSubformula->at(k);
+			return belongsTo(states->at(s2),a);
+
+		break;
+
+		case ALL_TOMORROW: /*f is E~Xa: s2 must contain ~a*/
+
+			a = leftSubformula->at(k);
+			return belongsTo(states->at(s2),negateFormula(a));
+
+		break;
+
+		case EXISTS_UNTIL: /*f is E(aUb): either b must be in s1 or E(aUb) must be in s2*/
+
+			b = rightSubformula->at(k);
+
+			if(belongsTo(states->at(s1),b))
+				return true;
+
+			//b is not in s1: check that E(aUb) is in s2
+
+			return belongsTo(states->at(s2),f);
+
+		break;
+
+		case ALL_UNTIL: /* f is E~(aUb): by construction, ~b is in s1. either ~a must be in s1 or E~(aUb) must be in s2*/
+
+			a = leftSubformula->at(k);
+
+			if(belongsTo(states->at(s1),negateFormula(a)))
+				return true;
+
+			//s1 contains a and ~b. E~(aUb) must be in s2
+
+			return belongsTo(states->at(s2),f);
+
+		break;
+
+		default: cout << "WARNING: unexpected formula in function checkEformula\n. Debug needed!\n"; return false; break;
+
+	}
+
+	return false;
+
+}
+
 bool Tableau::checkEUrecursive(ulint i,formula a, formula b){
 
 	//find a path starting from i that has always a until finally b is found (DFS visit)
 	//no loops back: mark states
 
-	marked->at(i) = true;//mark this state
+	status[i] = VISITED;
+	//marked->at(i) = true;//mark this state
 
 	if(belongsTo(states->at(i),b))//b is in this state: return success
 		return true;
@@ -889,7 +1090,7 @@ bool Tableau::checkEUrecursive(ulint i,formula a, formula b){
 
 	for(std::set<uint>::iterator it = edges->at(i).begin(); (not path_found) and it != edges->at(i).end();++it){//for all successors of i
 
-		if(not marked->at(*it)){//if the successor is not marked
+		if(status[*it] == NOT_VISITED){//if the successor is not marked
 
 			path_found |= checkEUrecursive(*it,a,b);
 
@@ -930,8 +1131,6 @@ bool Tableau::checkENU(ulint i){
 
 bool Tableau::checkENUrecursive(ulint i,formula a, formula b){
 
-	marked->at(i) = true;//mark this state
-
 	if(belongsTo(states->at(i),b))//b is in this state: return false
 		return false;
 
@@ -940,13 +1139,16 @@ bool Tableau::checkENUrecursive(ulint i,formula a, formula b){
 	if(belongsTo(states->at(i),negateFormula(a)))//~a is in this state return true
 		return true;
 
+	status[i] = VISITED;
+	//marked->at(i) = true;//mark this state
+
 	//here we know that the state contains ~b and a
 
 	bool path_found = false;
 
 	for(std::set<uint>::iterator it = edges->at(i).begin(); (not path_found) and it != edges->at(i).end();++it){//for all successors of i
 
-		if(not marked->at(*it)){//if the successor is not marked: call recursive DFS
+		if(status[*it] == NOT_VISITED){//if the successor is not marked: call recursive DFS
 
 			path_found |= checkEUrecursive(*it,a,b);
 
@@ -958,20 +1160,16 @@ bool Tableau::checkENUrecursive(ulint i,formula a, formula b){
 
 	}
 
-	marked->at(i) = false;//unmark this state
+	status[i] = NOT_VISITED;
+	//marked->at(i) = false;//unmark this state
 
 	return path_found;
 
 }
 
-bool Tableau::isSatisfable(){//true iif f admits a model
+bool Tableau::isSatisfiable(){//true iif f admits a model
 
-	for(uint i=0;i<states->size();i++)//for all states
-		if(not isRemoved->at(i))//check only states that have been not removed
-			if(belongsTo(states->at(i),initial_formula))//if the original formula is in the state
-				return true;
-
-	return false;
+	return number_of_states_with_original_formula>0;
 
 }
 
