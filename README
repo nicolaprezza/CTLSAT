@@ -51,7 +51,7 @@ Any other symbol not appearing in the above list will be interpreted as an atom.
 
 Formulas must be constructed according to the following grammar:
 
-S -> S^S | SvS | S->S | (S) | ATOM | ~S | AXS | EXS | A~XS | E~XS | A(SUS) | A~(SUS) | E(SUS) | AFS | A~FS | EFS | E~FS | AGS | A~GS | EGS | E~GS
+S -> S^S | SvS | S->S | (S) | ATOM | ~S | AXS | EXS | A~XS | E~XS | A(SUS) | A~(SUS) | E(SUS) | E~(SUS) | AFS | A~FS | EFS | E~FS | AGS | A~GS | EGS | E~GS | T
 
 *** OUTPUT ***
 
