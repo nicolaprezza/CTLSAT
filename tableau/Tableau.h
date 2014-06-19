@@ -181,6 +181,9 @@ private:
 
 	formula initial_formula;
 
+	ulint last_time_printed;
+	time_t timestamp;
+
 };
 
 } /* namespace ctl_sat */

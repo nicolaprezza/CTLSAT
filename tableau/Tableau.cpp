@@ -96,7 +96,9 @@ Tableau::Tableau(Formula * f){//builds the tableau for formula f
 	//repeat until no more culls are possible.
 	//when a state is removed, its predecessors are checked (and so on, recursively)
 
-	cout << "Starting repeated cull "<< endl;
+	cout << "Applying repeated cull ..."<< endl;
+	timestamp=time(0);
+	last_time_printed=(ulint)timestamp+1;
 	cull();
 	cout << "\ndone. Number of states left : " << number_of_states <<endl<<endl;
 
@@ -795,6 +797,12 @@ void Tableau::removeState(uint i){//removes state i and all entering and exiting
 
 	if(number_of_states%100==0)
 		cout << "  " << number_of_states << " states left\n";
+
+	/*if((ulint)difftime( time(0), timestamp)%5==0 and (ulint)difftime( time(0), timestamp) != last_time_printed){
+		last_time_printed = (ulint)difftime( time(0), timestamp);
+		cout << "  " << number_of_states << " states left\n";
+	}*/
+
 
 	isRemoved->at(i) = true;//mark as removed
 

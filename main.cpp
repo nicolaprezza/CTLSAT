@@ -12,6 +12,13 @@ using namespace ctl_sat;
 
 int main(int argc,char** argv){
 
+	if(argc != 2){
+		cout << "*** CTL-sat solver ***\n";
+		cout << "Usage: ctl-sat formula\n";
+		cout << "For more informations, read the file README.\n";
+		exit(0);
+	}
+
 	CTLParser * parser = new CTLParser();
 
 	Formula * f = parser->parse(string(argv[1]));
