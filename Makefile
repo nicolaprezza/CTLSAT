@@ -33,7 +33,7 @@ all: $(BINARY)
 
 $(BINARY): $(SOURCE)
 
-	g++ $(SOURCE) -o $(BINARY)
+	g++ -O3 $(SOURCE) -o $(BINARY)
 
 clean:
 
