@@ -59,6 +59,7 @@ Tableau::Tableau(Formula * f){//builds the tableau for formula f
 		isRemoved->at(i)=false;
 
 	status = new state_status[states->size()];
+	mark_timestamps.assign(states->size(),0);
 
 	/*cout << endl;
 	for(uint i=0;i<states->size();i++){
@@ -120,8 +121,13 @@ Tableau::Tableau(Formula * f){//builds the tableau for formula f
 }
 
 void Tableau::clearMarked(){
-	for(ulint i=0;i<states->size();i++)
+
+	current_timestamp=0;
+
+	for(ulint i=0;i<states->size();i++){
 		status[i] = NOT_VISITED;
+		mark_timestamps[i]=0;
+	}
 }
 
 void Tableau::computeSubFormulas(){
@@ -1069,6 +1075,9 @@ bool Tableau::checkANU(ulint i){
 
 bool Tableau::checkANUrecursive(ulint i,formula a, formula b){
 
+	current_timestamp++;
+	mark_timestamps[i] = current_timestamp;
+
 	//b is in this state: return false
 	if(belongsTo(states->at(i),b)){
 		status[i] = NOT_SATISFIED;
@@ -1137,8 +1146,24 @@ bool Tableau::checkANUrecursive(ulint i,formula a, formula b){
 
 	if(E_satisfied)
 		status[i] = SATISFIED;
-	else
+	else{
+
 		status[i] = NOT_SATISFIED;
+
+		//in this case, erase all marks made after the timestamp of this state because some assumptions made while
+		//accepting loops may no more be valid (e.g. if a loop turned back to this state, now this state is not satisfied so the loop should not
+		//have been accepted)
+
+		for(ulint s=0;s<states->size();s++){
+
+			if(mark_timestamps[s]>mark_timestamps[i]){//this status has been computed after the current node: erase it
+				mark_timestamps[s]=0;
+				status[s] = NOT_VISITED;
+			}
+
+		}
+
+	}
 
 	return status[i] == SATISFIED;
 

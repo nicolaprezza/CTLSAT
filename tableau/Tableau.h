@@ -176,6 +176,8 @@ private:
 	//vector<bool> * marked;//mark states during visits
 
 	state_status * status;//mark states during visits
+	vector<ulint> mark_timestamps;//remember marking timestamp
+	ulint current_timestamp;
 
 	ulint number_of_states_with_original_formula;//number of states that contain the original formula
 
