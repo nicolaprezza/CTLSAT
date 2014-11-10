@@ -1,13 +1,14 @@
 Welcome to the CTL-SAT checker!
+===============
 
-*** COMPILE ***
+### COMPILE
 
 To compile, execute the following commands (in the folder CTLSAT/):
 
 > make clean
 > make
 
-*** EXAMPLE ***
+### EXAMPLE
 
 In the same directory, the command
 
@@ -15,7 +16,7 @@ In the same directory, the command
 
 executes the program on the unsatisfable formula "~( AG(p->EXp) -> AG(p->EGp) )"
 
-*** RUN ***
+### RUN
 
 To test satisfability of a CTL formula, execute 
 
@@ -25,7 +26,7 @@ Where 'formula' is a CTL formula. Example:
 
 > ./ctl-sat "~( (A(pUq) ^ AG(q->r) ^ AG(r->EXr)) -> EFEGr )"
 
-*** SYNTAX OF FORMULAS ***
+### SYNTAX OF FORMULAS
 
 Spaces are automatically removed before parsing and can be inserted anywhere in the formula. 
 
@@ -53,7 +54,7 @@ Formulas must be constructed according to the following grammar:
 
 S -> S^S | SvS | S->S | (S) | ATOM | ~S | AXS | EXS | A~XS | E~XS | A(SUS) | A~(SUS) | E(SUS) | E~(SUS) | AFS | A~FS | EFS | E~FS | AGS | A~GS | EGS | E~GS | T
 
-*** OUTPUT ***
+### OUTPUT DESCRIPTION
 
 In the first line ("Parsing input formula : ") the input formula is printed.
 
@@ -69,8 +70,14 @@ The next lines show the execution of the repeated cull. The program heuristicall
 
 Once the cull is terminated, the program prints the number of states left and reports the (un)satisfability of the input formula.
 
-*** COMPLEXITY ***
+### COMPLEXITY
 
 The number of states is |S| = O(2^n), the number of edges is |E| = O((2^n)^2), where n is the size of the input formula (i.e. number of subformulas). There are at most |S| cull steps, each requiring O(|E|) operations. The worst-case time complexity is thus O( (2^n)^3 ), while the worst-case space complexity is O( (2^n)^2 )
+
+### SOME EXAMPLES OF UNSATISFIABLE FORMULAS
+
+~( (AFA~(aUb)) -> ( AF( (~a ^ ~b) v EGa) ) )
+
+
 
 
