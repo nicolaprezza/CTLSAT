@@ -1,4 +1,4 @@
-Welcome to the CTL-SAT checker!
+CTL-SAT solver
 ===============
 
 ### COMPILE
@@ -34,7 +34,7 @@ The following symbols are reserved and cannot be used as atoms:
 
 symbol	meaning
 
-^	AND
+^\t	AND\n
 v	OR
 ~	NEGATION
 ->	IMPLICATION
