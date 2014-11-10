@@ -80,8 +80,8 @@ The number of states is |S| = O(2^n), the number of edges is |E| = O((2^n)^2), w
 
 ### SOME EXAMPLES OF UNSATISFIABLE FORMULAS
 
-~( (AFA~(aUb)) -> ( AF( (~a ^ ~b) v EGa) ) )
-~(  ( EFEGa ^ AG(a->b) ) -> EFEGb   )
+> ~( (AFA~(aUb)) -> ( AF( (~a ^ ~b) v EGa) ) )
+> ~(  ( EFEGa ^ AG(a->b) ) -> EFEGb   )
 
 
 
