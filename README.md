@@ -32,19 +32,23 @@ Spaces are automatically removed before parsing and can be inserted anywhere in 
 
 The following symbols are reserved and cannot be used as atoms:
 
-symbol	meaning
+	
 
-* ^    AND
-* v	OR
-* ~	NEGATION
-* ->	IMPLICATION
-* ()	PARENTHESES
-* T	TRUTH (interpreted as "~((p)^(~(p)))", where p is an atom)
-* A	ALL PATHS
-* E	EXIST PATH
-* U	UNTIL
-* F	FINALLY
-* G	EVERYWHERE
+| symbol   |      meaning      |
+|----------|:-------------:|
+| ^  |  AND |
+| v |	OR |
+| ~ |	NEGATION |
+| -> |	IMPLICATION |
+| () |	PARENTHESES |
+| T |	TRUTH (interpreted as "~((p)^(~(p)))", where p is an atom) |
+| A |	ALL PATHS |
+| E  |	EXIST PATH | 
+| U |	UNTIL |
+| F |	FINALLY |
+| G |	EVERYWHERE |
+
+
 
 moreover, the symbol $ is used by the parser as formula terminator and is reserved.
 
