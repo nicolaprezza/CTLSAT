@@ -34,7 +34,7 @@ The following symbols are reserved and cannot be used as atoms:
 
 symbol	meaning
 
-* ^	AND
+* ^    AND
 * v	OR
 * ~	NEGATION
 * ->	IMPLICATION
