@@ -47,7 +47,7 @@ The following symbols are reserved and cannot be used as atoms:
 | U |	UNTIL |
 | F |	FINALLY |
 | G |	EVERYWHERE |
-
+| X |   TOMORROW |
 
 
 moreover, the symbol $ is used by the parser as formula terminator and is reserved.
@@ -81,7 +81,7 @@ The number of states is |S| = O(2^n), the number of edges is |E| = O((2^n)^2), w
 ### SOME EXAMPLES OF UNSATISFIABLE FORMULAS
 
 ~( (AFA~(aUb)) -> ( AF( (~a ^ ~b) v EGa) ) )
-
+~(  ( EFEGa ^ AG(a->b) ) -> EFEGb   )
 
 
 
