@@ -6,6 +6,7 @@ CTL-SAT solver
 To compile, execute the following commands (in the folder CTLSAT/):
 
 > make clean
+
 > make
 
 ### EXAMPLE
