@@ -84,5 +84,11 @@ The number of states is |S| = O(2^n), the number of edges is |E| = O((2^n)^2), w
 
 > ~(  ( EFEGa ^ AG(a->b) ) -> EFEGb   )
 
+> ~(  ( AGEFEGa ^ EFAG(a->b) ) -> EFEGb   )
+
+> ~((  AG( (a->EXE(aUb))^(b->EXE(bUa)) ) ^ a )  ->  E( aU( b^E(bUa^E(aUb^E(bUa^E(aUb^E(bUa^E(aUb^E(bUa^E(aUb^E(bUa^E(aUb)))))))))) ) )  )
+
+> ~(  (AG( (a->EFb)^(b->EFa) ) ^ a) -> EF(b^EF(a^EF(b^EF(a^EF(b^EF(a^EF(b^EF(a^EFb))))))))  )
+
 
 
