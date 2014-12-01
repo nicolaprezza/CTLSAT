@@ -1307,7 +1307,7 @@ bool Tableau::checkENUrecursive(ulint i,formula a, formula b){
 
 		if(status[*it] == NOT_VISITED){//if the successor is not marked: call recursive DFS
 
-			path_found |= checkEUrecursive(*it,a,b);
+			path_found |= checkENUrecursive(*it,a,b);
 
 		}else{//the successor is marked: since we are unmarking states returning from recursion, this means that we found a loop
 
