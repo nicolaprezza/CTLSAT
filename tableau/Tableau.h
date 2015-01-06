@@ -69,7 +69,7 @@ private:
 	bool checkEasy(ulint i);//check EXT,EX,ENX
 
 	bool checkEU(ulint i);
-	bool checkEUrecursive(ulint i,formula a, formula b);
+	bool checkEUrecursive(ulint i,formula_index k, formula a, formula b);//k=index of the EU formula. a, b = sub-formulas
 	bool checkENU(ulint i);
 	bool checkENUrecursive(ulint i,formula a, formula b);
 	bool checkMedium(ulint i);
@@ -147,6 +147,8 @@ private:
 	state newState();//returns a new state (i.e. vector of bool of length |positive_closure_set|)
 
 	void removeState(uint i);//removes state i and all entering and exiting edges
+	void removeGlobalMarks(uint i);//backtrack on the predecessors of i and clear their global marks (since i has been removed, global marks might not be valid anymore)
+	void removeGlobalMarksRecursive(uint i);//backtrack on the predecessors of i and clear their global marks (since i has been removed, global marks might not be valid anymore)
 
 	vector<Formula*> * positive_closure;//the formulas in lexicographic order. NB:only non-negated formulas are here (negated versions are implicit)
 
@@ -156,22 +158,33 @@ private:
 	vector<formula> * rightSubformula;
 
 	//each state S is a vector of bool of length |closure_set|
-	//if S(i)=true, then closure_set(i) is inside S
-	//if S(i)=false, then ~closure_set(i) is inside S
-	vector<state> * states;
+	//if states[S][i]=true, then closure_set(i) is inside S
+	//if states[S][i]=false, then ~closure_set(i) is inside S
+	vector<state> states;
+
+	//the following vector is similar to states, but marks only EU, AU, ENU, ANU formulas
+	//that are valid on the whole model for that state.
+	//globally_satisfied_formulas_positive marks with a 1 the positive form of that formula, globally_satisfied_formulas_negative the negative.
+	//if globally_satisfied_formulas_positive[S][i] = true, then closure_set(i) is valid in state S
+	//if globally_satisfied_formulas_negative[S][i] = true, then ~closure_set(i) is valid in state S
+
+	vector<state> globally_satisfied_formulas_positive;
+	vector<state> globally_satisfied_formulas_negative;
+
+	vector<bool> visited_during_mark_removal;//state i was already visited recursively while removing global marks? (prevent loops)
 
 	ulint number_of_states;
 	ulint number_of_edges;
 
 	//edges: edges(i) is the list i_1,i_2,...,i_m such that there exists an edge from state i to each of the states i_1,i_2,...,i_m
-	vector<set<uint> > * edges;
+	vector<set<uint> > edges;
 
 	//back_edges: back_edges(i) is the list i_1,i_2,...,i_m such that there exists an edge from each of the states i_1,i_2,...,i_m to the state i
 	//introduced to backtrack effect of the cull
-	vector<set<uint> > * back_edges;
+	vector<set<uint> > back_edges;
 
 	//removed(i) = state in position i has been removed
-	vector<bool> * isRemoved;
+	vector<bool> isRemoved;
 
 	//vector<bool> * marked;//mark states during visits
 

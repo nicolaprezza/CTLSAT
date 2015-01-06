@@ -33,7 +33,7 @@ all: $(BINARY)
 
 $(BINARY): $(SOURCE)
 
-	g++ -O3 $(SOURCE) -o $(BINARY)
+	g++ -march=native -mtune=generic -O3 $(SOURCE) -o $(BINARY)
 
 clean:
 
