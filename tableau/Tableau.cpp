@@ -52,17 +52,17 @@ Tableau::Tableau(Formula * f){//builds the tableau for formula f
 	number_of_states = states.size();
 
 	//these vectors mark formulas that are globally valid in a state (i.e. they have been previously checked and we don't need to check them again)
-	//globally_satisfied_formulas_positive = vector<state>(number_of_states);
-	//globally_satisfied_formulas_negative = vector<state>(number_of_states);
+	globally_satisfied_formulas_positive = vector<state>(number_of_states);
+	globally_satisfied_formulas_negative = vector<state>(number_of_states);
 
 	//visited_during_mark_removal = vector<bool>(number_of_states,false);
 
-	/*for(uint i=0;i<number_of_states;++i){
+	for(uint i=0;i<number_of_states;++i){
 
 		globally_satisfied_formulas_positive[i] = newState();
 		globally_satisfied_formulas_negative[i] = newState();
 
-	}*/
+	}
 
 
 	cout << "done. Initial model has " << number_of_states << " states"<<endl<<endl;
